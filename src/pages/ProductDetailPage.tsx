@@ -1,10 +1,10 @@
-
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { useCart } from "@/context/CartContext";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
@@ -92,6 +92,7 @@ const ProductDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
+  const { addToCart } = useCart();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   
@@ -148,6 +149,32 @@ const ProductDetailPage = () => {
     }, 1500);
   };
 
+  const handleAddToCart = () => {
+    if (!isAuthenticated) {
+      toast({
+        title: "Login required",
+        description: "Please log in as a buyer to add items to cart.",
+      });
+      navigate('/login');
+      return;
+    }
+    
+    if (user?.role !== 'buyer') {
+      toast({
+        title: "Access denied",
+        description: "Only buyer accounts can add items to cart.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    addToCart(product);
+    toast({
+      title: "Added to cart",
+      description: `${product.name} has been added to your cart.`,
+    });
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
@@ -183,7 +210,7 @@ const ProductDetailPage = () => {
                         </svg>
                       ))}
                     </div>
-                    <span className="text-sm text-gray-600">{product.rating} ({product.reviews} reviews)</span>
+                    <span className="text-sm text-muted-foreground">{product.rating} ({product.reviews} reviews)</span>
                   </div>
                 </div>
               </div>
@@ -197,35 +224,44 @@ const ProductDetailPage = () => {
                 <p className="whitespace-pre-line">{product.fullDescription}</p>
               </div>
               
-              <div className="pt-4">
+              <div className="pt-4 flex flex-col sm:flex-row gap-4">
                 <Button 
                   size="lg" 
-                  className="w-full md:w-auto" 
+                  className="w-full" 
                   onClick={handlePurchase}
                   disabled={isLoading}
                 >
-                  {isLoading ? "Processing..." : "Purchase with Escrow Protection"}
+                  {isLoading ? "Processing..." : "Buy Now with Escrow Protection"}
                 </Button>
                 
-                <Card className="mt-6 bg-blue-50 border border-blue-200">
-                  <CardContent className="p-4">
-                    <div className="flex items-start">
-                      <div className="bg-escrow-blue rounded-full p-1 mr-4">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                        </svg>
-                      </div>
-                      <div>
-                        <h4 className="font-semibold text-lg mb-1">TrustFlow Escrow Protection</h4>
-                        <p className="text-sm">
-                          Your payment is securely held until you confirm receipt of your item. 
-                          If there's a problem, our dispute resolution team will help.
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                <Button 
+                  size="lg" 
+                  variant="outline"
+                  className="w-full"
+                  onClick={handleAddToCart}
+                >
+                  Add to Cart
+                </Button>
               </div>
+              
+              <Card className="mt-6 bg-blue-50 border border-blue-200 dark:bg-blue-950 dark:border-blue-900">
+                <CardContent className="p-4">
+                  <div className="flex items-start">
+                    <div className="bg-escrow-blue rounded-full p-1 mr-4">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-lg mb-1">TrustFlow Escrow Protection</h4>
+                      <p className="text-sm">
+                        Your payment is securely held until you confirm receipt of your item. 
+                        If there's a problem, our dispute resolution team will help.
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </div>
         </div>

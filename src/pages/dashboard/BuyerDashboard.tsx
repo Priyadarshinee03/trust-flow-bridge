@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/context/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Badge } from "@/components/ui/badge";
@@ -42,7 +43,8 @@ const mockTransactions = [
     seller: 'TechStore', 
     amount: 89.99, 
     status: 'in-escrow', 
-    date: '2023-05-15' 
+    date: '2023-05-15',
+    trackingNumber: 'TF28374659'
   },
   { 
     id: '102', 
@@ -50,7 +52,8 @@ const mockTransactions = [
     seller: 'GadgetZone', 
     amount: 199.99, 
     status: 'delivered', 
-    date: '2023-05-10' 
+    date: '2023-05-10',
+    trackingNumber: 'TF65748392'
   },
   { 
     id: '103', 
@@ -58,13 +61,15 @@ const mockTransactions = [
     seller: 'AudioHub', 
     amount: 129.99, 
     status: 'completed', 
-    date: '2023-05-01' 
+    date: '2023-05-01',
+    trackingNumber: 'TF12983745'
   }
 ];
 
 const BuyerDashboard = () => {
   const { user, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [transactions, setTransactions] = useState(mockTransactions);
 
   useEffect(() => {
@@ -79,16 +84,21 @@ const BuyerDashboard = () => {
         ? { ...t, status: 'completed' } 
         : t
     ));
+    
+    toast({
+      title: "Delivery confirmed",
+      description: "Funds have been released to the seller. Thank you for your purchase!",
+    });
   };
 
   const getStatusBadge = (status: string) => {
     switch(status) {
       case 'in-escrow':
-        return <Badge variant="outline" className="bg-yellow-100 text-yellow-800">In Escrow</Badge>;
+        return <Badge variant="outline" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300">In Escrow</Badge>;
       case 'delivered':
-        return <Badge variant="outline" className="bg-blue-100 text-blue-800">Delivered</Badge>;
+        return <Badge variant="outline" className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">Delivered</Badge>;
       case 'completed':
-        return <Badge variant="outline" className="bg-green-100 text-green-800">Completed</Badge>;
+        return <Badge variant="outline" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">Completed</Badge>;
       default:
         return <Badge variant="outline">Unknown</Badge>;
     }
@@ -146,21 +156,29 @@ const BuyerDashboard = () => {
                           </div>
                         </CardHeader>
                         <CardContent>
-                          <p className="font-medium">Amount: ${transaction.amount.toFixed(2)}</p>
+                          <div className="space-y-2">
+                            <p className="font-medium">Amount: ${transaction.amount.toFixed(2)}</p>
+                            <p className="text-sm">Tracking Number: {transaction.trackingNumber}</p>
+                          </div>
                         </CardContent>
                         <CardFooter>
                           {transaction.status === 'in-escrow' ? (
                             <div className="text-sm text-muted-foreground">
-                              Payment is held in escrow until delivery
+                              Payment is held in escrow until delivery. Tracking #{transaction.trackingNumber}
                             </div>
                           ) : transaction.status === 'delivered' ? (
-                            <Button 
-                              onClick={() => confirmDelivery(transaction.id)}
-                            >
-                              Confirm Delivery & Release Funds
-                            </Button>
+                            <div className="flex flex-col w-full space-y-2">
+                              <Button 
+                                onClick={() => confirmDelivery(transaction.id)}
+                              >
+                                Confirm Receipt & Release Funds
+                              </Button>
+                              <p className="text-xs text-muted-foreground text-center">
+                                By confirming receipt, you're authorizing the release of funds to the seller
+                              </p>
+                            </div>
                           ) : (
-                            <div className="text-sm text-green-600">
+                            <div className="text-sm text-green-600 dark:text-green-400">
                               Transaction completed successfully
                             </div>
                           )}

@@ -5,11 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/context/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast";
 
 // Mock data for disputes
 const mockDisputes = [
@@ -59,7 +59,8 @@ const mockTransactions = [
     amount: 89.99, 
     status: 'in-escrow', 
     date: '2023-05-15',
-    escrowFee: 4.50
+    escrowFee: 4.50,
+    escrowTime: '24 hrs ago'
   },
   { 
     id: '102', 
@@ -69,7 +70,9 @@ const mockTransactions = [
     amount: 199.99, 
     status: 'delivered', 
     date: '2023-05-10',
-    escrowFee: 10.00
+    escrowFee: 10.00,
+    escrowTime: '5 days ago',
+    deliveryDate: '2023-05-12'
   },
   { 
     id: '103', 
@@ -79,7 +82,10 @@ const mockTransactions = [
     amount: 129.99, 
     status: 'completed', 
     date: '2023-05-01',
-    escrowFee: 6.50
+    escrowFee: 6.50,
+    escrowTime: '2 weeks ago',
+    deliveryDate: '2023-05-03',
+    completionDate: '2023-05-04'
   },
   { 
     id: '104', 
@@ -89,7 +95,10 @@ const mockTransactions = [
     amount: 149.99, 
     status: 'completed', 
     date: '2023-04-28',
-    escrowFee: 7.50
+    escrowFee: 7.50,
+    escrowTime: '3 weeks ago',
+    deliveryDate: '2023-04-30',
+    completionDate: '2023-05-01'
   }
 ];
 
@@ -106,6 +115,7 @@ const AdminDashboard = () => {
   const completedTransactions = transactions.filter(t => t.status === 'completed').length;
   const activeDisputes = disputes.filter(d => d.status !== 'resolved').length;
   const totalRevenue = transactions.reduce((sum, t) => sum + t.escrowFee, 0);
+  const fundsInEscrow = transactions.filter(t => t.status === 'in-escrow').reduce((sum, t) => sum + t.amount, 0);
 
   useEffect(() => {
     if (!isAuthenticated || (user && user.role !== 'admin')) {
@@ -139,20 +149,48 @@ const AdminDashboard = () => {
     });
   };
 
+  const releaseFunds = (transactionId: string) => {
+    setTransactions(transactions.map(t => 
+      t.id === transactionId 
+        ? { ...t, status: 'completed', completionDate: new Date().toISOString().split('T')[0] } 
+        : t
+    ));
+    
+    toast({
+      title: "Funds released",
+      description: `Funds for Transaction #${transactionId} have been released to the seller.`,
+    });
+  };
+
+  const refundBuyer = (transactionId: string) => {
+    setTransactions(transactions.map(t => 
+      t.id === transactionId 
+        ? { ...t, status: 'refunded', completionDate: new Date().toISOString().split('T')[0] } 
+        : t
+    ));
+    
+    toast({
+      title: "Funds refunded",
+      description: `Funds for Transaction #${transactionId} have been refunded to the buyer.`,
+    });
+  };
+
   const getStatusBadge = (status: string) => {
     switch(status) {
       case 'open':
-        return <Badge variant="outline" className="bg-red-100 text-red-800">Open</Badge>;
+        return <Badge variant="outline" className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300">Open</Badge>;
       case 'investigating':
-        return <Badge variant="outline" className="bg-yellow-100 text-yellow-800">Investigating</Badge>;
+        return <Badge variant="outline" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300">Investigating</Badge>;
       case 'resolved':
-        return <Badge variant="outline" className="bg-green-100 text-green-800">Resolved</Badge>;
+        return <Badge variant="outline" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">Resolved</Badge>;
       case 'in-escrow':
-        return <Badge variant="outline" className="bg-blue-100 text-blue-800">In Escrow</Badge>;
+        return <Badge variant="outline" className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">In Escrow</Badge>;
       case 'delivered':
-        return <Badge variant="outline" className="bg-purple-100 text-purple-800">Delivered</Badge>;
+        return <Badge variant="outline" className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300">Delivered</Badge>;
       case 'completed':
-        return <Badge variant="outline" className="bg-green-100 text-green-800">Completed</Badge>;
+        return <Badge variant="outline" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">Completed</Badge>;
+      case 'refunded':
+        return <Badge variant="outline" className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300">Refunded</Badge>;
       default:
         return <Badge variant="outline">Unknown</Badge>;
     }
@@ -198,11 +236,11 @@ const AdminDashboard = () => {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium">
-                  Completed Transactions
+                  Funds in Escrow
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{completedTransactions}</div>
+                <div className="text-2xl font-bold">${fundsInEscrow.toFixed(2)}</div>
               </CardContent>
             </Card>
             
@@ -229,11 +267,89 @@ const AdminDashboard = () => {
             </Card>
           </div>
 
-          <Tabs defaultValue="disputes" className="w-full">
+          <Tabs defaultValue="escrow" className="w-full">
             <TabsList className="mb-8">
+              <TabsTrigger value="escrow">Escrow Management</TabsTrigger>
               <TabsTrigger value="disputes">Disputes</TabsTrigger>
               <TabsTrigger value="transactions">All Transactions</TabsTrigger>
             </TabsList>
+
+            <TabsContent value="escrow">
+              <div className="grid gap-6">
+                <h2 className="text-2xl font-semibold">Escrow Management</h2>
+                
+                <div className="grid gap-4">
+                  {transactions
+                    .filter(t => t.status === 'in-escrow' || t.status === 'delivered')
+                    .map((transaction) => (
+                      <Card key={transaction.id}>
+                        <CardHeader className="pb-2">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <CardTitle>Transaction #{transaction.id}</CardTitle>
+                              <CardDescription>
+                                {transaction.productName} - {transaction.date}
+                              </CardDescription>
+                            </div>
+                            {getStatusBadge(transaction.status)}
+                          </div>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          <div>
+                            <p className="font-medium">Amount in Escrow: ${transaction.amount.toFixed(2)}</p>
+                            <p className="text-sm">Escrow Fee: ${transaction.escrowFee.toFixed(2)}</p>
+                            <p className="text-sm text-muted-foreground">
+                              Buyer: {transaction.buyer} | Seller: {transaction.seller}
+                            </p>
+                          </div>
+                          
+                          <div className="border-t pt-3">
+                            <p className="font-medium">Status Details:</p>
+                            <p className="text-sm">
+                              {transaction.status === 'in-escrow' 
+                                ? `Payment received and held in escrow ${transaction.escrowTime}`
+                                : `Product marked as delivered on ${transaction.deliveryDate}, awaiting buyer confirmation`
+                              }
+                            </p>
+                          </div>
+                        </CardContent>
+                        <CardFooter className="flex flex-col sm:flex-row gap-2">
+                          {transaction.status === 'delivered' && (
+                            <>
+                              <Button 
+                                onClick={() => releaseFunds(transaction.id)}
+                                className="flex-1"
+                              >
+                                Release Funds to Seller
+                              </Button>
+                              <Button 
+                                variant="outline" 
+                                onClick={() => refundBuyer(transaction.id)}
+                                className="flex-1"
+                              >
+                                Issue Refund to Buyer
+                              </Button>
+                            </>
+                          )}
+                          {transaction.status === 'in-escrow' && (
+                            <p className="text-sm text-muted-foreground">
+                              Waiting for seller to mark as shipped and buyer to confirm delivery
+                            </p>
+                          )}
+                        </CardFooter>
+                      </Card>
+                    ))}
+                </div>
+                
+                {transactions.filter(t => t.status === 'in-escrow' || t.status === 'delivered').length === 0 && (
+                  <Card>
+                    <CardContent className="py-10 text-center">
+                      <p>There are no active escrow transactions to manage.</p>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            </TabsContent>
 
             <TabsContent value="disputes">
               <div className="grid gap-6">

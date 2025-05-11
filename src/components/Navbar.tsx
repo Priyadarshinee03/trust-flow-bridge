@@ -1,179 +1,81 @@
 
-import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, ShoppingCart, Package, User } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { ThemeToggle } from "./ThemeToggle";
+import { ShoppingCart } from "lucide-react";
+import { Badge } from "./ui/badge";
+import { useCart } from "@/context/CartContext";
 
 const Navbar = () => {
-  const [isOpen, setIsOpen] = useState(false);
-  const { user, isAuthenticated, logout } = useAuth();
-  const navigate = useNavigate();
+  const { isAuthenticated, user, logout } = useAuth();
+  const { cartItems } = useCart();
+  
+  const cartItemCount = cartItems?.length || 0;
 
-  // Close mobile menu when route changes
-  useEffect(() => {
-    setIsOpen(false);
-  }, [navigate]);
+  const getDashboardLink = () => {
+    if (user?.role === 'buyer') return '/buyer/dashboard';
+    if (user?.role === 'seller') return '/seller/dashboard';
+    if (user?.role === 'admin') return '/admin/dashboard';
+    return '/';
+  };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center justify-between">
-        <Link to="/" className="flex items-center space-x-2">
-          <div className="bg-escrow-blue rounded-full p-1">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
-          </div>
-          <span className="font-bold text-xl">TrustFlow</span>
-        </Link>
-
-        {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center space-x-6">
-          <Link to="/" className="text-sm font-medium transition-colors hover:text-primary">
-            Home
+    <nav className="bg-background border-b border-border py-4">
+      <div className="container mx-auto px-4 flex items-center justify-between">
+        <div>
+          <Link to="/" className="text-2xl font-bold text-foreground">
+            TrustFlow
           </Link>
-          <Link to="/how-it-works" className="text-sm font-medium transition-colors hover:text-primary">
+        </div>
+        
+        <div className="hidden md:flex items-center space-x-8">
+          <Link to="/how-it-works" className="text-foreground hover:text-primary">
             How It Works
           </Link>
-          <Link to="/pricing" className="text-sm font-medium transition-colors hover:text-primary">
+          <Link to="/pricing" className="text-foreground hover:text-primary">
             Pricing
           </Link>
+        </div>
+        
+        <div className="flex items-center space-x-4">
+          <ThemeToggle />
+          
+          {isAuthenticated && user?.role === 'buyer' && (
+            <Link to="/cart" className="relative">
+              <Button variant="ghost" size="icon">
+                <ShoppingCart className="h-5 w-5" />
+                {cartItemCount > 0 && (
+                  <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0">
+                    {cartItemCount}
+                  </Badge>
+                )}
+              </Button>
+            </Link>
+          )}
           
           {isAuthenticated ? (
             <div className="flex items-center space-x-4">
-              {user?.role === 'buyer' && (
-                <Button variant="outline" size="sm" className="flex items-center gap-2" asChild>
-                  <Link to="/buyer/dashboard">
-                    <ShoppingCart className="h-4 w-4" />
-                    Dashboard
-                  </Link>
-                </Button>
-              )}
-              
-              {user?.role === 'seller' && (
-                <Button variant="outline" size="sm" className="flex items-center gap-2" asChild>
-                  <Link to="/seller/dashboard">
-                    <Package className="h-4 w-4" />
-                    Dashboard
-                  </Link>
-                </Button>
-              )}
-              
-              {user?.role === 'admin' && (
-                <Button variant="outline" size="sm" className="flex items-center gap-2" asChild>
-                  <Link to="/admin/dashboard">
-                    <User className="h-4 w-4" />
-                    Admin
-                  </Link>
-                </Button>
-              )}
-              
-              <Button 
-                variant="default" 
-                onClick={() => {
-                  logout();
-                  navigate('/');
-                }}
-              >
+              <Button variant="ghost" asChild>
+                <Link to={getDashboardLink()}>Dashboard</Link>
+              </Button>
+              <Button onClick={logout} variant="outline">
                 Logout
               </Button>
             </div>
           ) : (
-            <Button variant="default" onClick={() => navigate('/login')}>Get Started</Button>
+            <div className="flex items-center space-x-4">
+              <Button variant="ghost" asChild>
+                <Link to="/login">Login</Link>
+              </Button>
+              <Button variant="default" asChild>
+                <Link to="/register">Register</Link>
+              </Button>
+            </div>
           )}
-        </nav>
-
-        {/* Mobile Navigation Toggle */}
-        <div className="md:hidden">
-          <Button variant="ghost" size="icon" onClick={() => setIsOpen(!isOpen)}>
-            {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          </Button>
         </div>
       </div>
-
-      {/* Mobile Navigation Menu */}
-      {isOpen && (
-        <div className="md:hidden container py-4 bg-background">
-          <nav className="flex flex-col space-y-4">
-            <Link 
-              to="/" 
-              className="text-sm font-medium transition-colors hover:text-primary"
-            >
-              Home
-            </Link>
-            <Link 
-              to="/how-it-works" 
-              className="text-sm font-medium transition-colors hover:text-primary"
-            >
-              How It Works
-            </Link>
-            <Link 
-              to="/pricing" 
-              className="text-sm font-medium transition-colors hover:text-primary"
-            >
-              Pricing
-            </Link>
-            
-            {isAuthenticated ? (
-              <>
-                {user?.role === 'buyer' && (
-                  <Link 
-                    to="/buyer/dashboard"
-                    className="text-sm font-medium transition-colors hover:text-primary flex items-center"
-                  >
-                    <ShoppingCart className="h-4 w-4 mr-2" />
-                    Buyer Dashboard
-                  </Link>
-                )}
-                
-                {user?.role === 'seller' && (
-                  <Link 
-                    to="/seller/dashboard"
-                    className="text-sm font-medium transition-colors hover:text-primary flex items-center"
-                  >
-                    <Package className="h-4 w-4 mr-2" />
-                    Seller Dashboard
-                  </Link>
-                )}
-                
-                {user?.role === 'admin' && (
-                  <Link 
-                    to="/admin/dashboard"
-                    className="text-sm font-medium transition-colors hover:text-primary flex items-center"
-                  >
-                    <User className="h-4 w-4 mr-2" />
-                    Admin Dashboard
-                  </Link>
-                )}
-                
-                <Button 
-                  variant="default" 
-                  className="w-full"
-                  onClick={() => {
-                    logout();
-                    navigate('/');
-                    setIsOpen(false);
-                  }}
-                >
-                  Logout
-                </Button>
-              </>
-            ) : (
-              <Button 
-                variant="default" 
-                className="w-full"
-                onClick={() => {
-                  navigate('/login');
-                  setIsOpen(false);
-                }}
-              >
-                Get Started
-              </Button>
-            )}
-          </nav>
-        </div>
-      )}
-    </header>
+    </nav>
   );
 };
 
